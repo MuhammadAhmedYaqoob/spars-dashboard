@@ -58,10 +58,28 @@ def get_leads(
     
     query = db.query(Lead)
     
-    # Check if user is Admin or Sales Manager (they can see all leads)
+    # Check if user is Admin or Sales Manager
     role = db.query(Role).filter(Role.id == current_user.role_id).first()
-    if role and (role.role_name == "Admin" or role.role_name == "Sales Manager" or role.permissions.get("all")):
-        # Admin and Sales Manager see all leads
+    if role and (role.role_name == "Admin" or role.permissions.get("all")):
+        # Admin sees all leads
+        leads = query.all()
+    elif role and role.role_name == "Sales Manager":
+        # Sales Manager: only see leads assigned to their own Sales Executives
+        # Get IDs of Sales Executives under this manager
+        sales_executive_role = db.query(Role).filter(Role.role_name == "Sales Executive").first()
+        if sales_executive_role:
+            team_executive_ids = db.query(User.id).filter(
+                User.manager_id == current_user.id,
+                User.role_id == sales_executive_role.id
+            ).all()
+            team_executive_ids = [id[0] for id in team_executive_ids]
+            
+            if team_executive_ids:
+                query = query.filter(Lead.assigned_to.in_(team_executive_ids))
+            else:
+                # No team members, return empty list
+                query = query.filter(Lead.id == -1)  # Impossible condition
+        
         leads = query.all()
     else:
         # Sales Executive and other users only see leads assigned to them
@@ -109,6 +127,15 @@ def create_lead(
             user_role = db.query(Role).filter(Role.id == assigned_user.role_id).first()
             # Only allow assignment to Sales Executive (level 2) and Marketing (level 3)
             if user_role and user_role.hierarchy_level >= 2:
+                # Additional validation for Sales Managers: can only assign to their own team
+                current_role = db.query(Role).filter(Role.id == current_user.role_id).first()
+                if current_role and current_role.role_name == "Sales Manager":
+                    if assigned_user.manager_id != current_user.id:
+                        raise HTTPException(
+                            status_code=status.HTTP_403_FORBIDDEN,
+                            detail="You can only assign leads to your own Sales Executives"
+                        )
+                
                 lead_data['assigned_to'] = assigned_user.id
                 assigned_name = assigned_user.name
             else:
@@ -171,6 +198,15 @@ def update_lead(
                 user_role = db.query(Role).filter(Role.id == assigned_user.role_id).first()
                 # Only allow assignment to Sales Executive (level 2)
                 if user_role and user_role.hierarchy_level == 2:
+                    # Additional validation for Sales Managers: can only assign to their own team
+                    current_role = db.query(Role).filter(Role.id == current_user.role_id).first()
+                    if current_role and current_role.role_name == "Sales Manager":
+                        if assigned_user.manager_id != current_user.id:
+                            raise HTTPException(
+                                status_code=status.HTTP_403_FORBIDDEN,
+                                detail="You can only assign leads to your own Sales Executives"
+                            )
+                    
                     lead.assigned_to = assigned_user.id
                     lead.assigned = assigned_user.name
                     # Always set created_by to the current user when assigning (who assigns is who created/assigned it)
@@ -198,6 +234,15 @@ def update_lead(
             if assigned_user:
                 user_role = db.query(Role).filter(Role.id == assigned_user.role_id).first()
                 if user_role and user_role.hierarchy_level == 2:
+                    # Additional validation for Sales Managers: can only assign to their own team
+                    current_role = db.query(Role).filter(Role.id == current_user.role_id).first()
+                    if current_role and current_role.role_name == "Sales Manager":
+                        if assigned_user.manager_id != current_user.id:
+                            raise HTTPException(
+                                status_code=status.HTTP_403_FORBIDDEN,
+                                detail="You can only assign leads to your own Sales Executives"
+                            )
+                    
                     lead.assigned_to = assigned_user.id
                     lead.assigned = assigned_user.name
                     # Always set created_by to the current user when assigning
@@ -273,6 +318,15 @@ def convert_submission(
             user_role = db.query(Role).filter(Role.id == assigned_user.role_id).first()
             # Only allow assignment to Sales Executive (hierarchy_level = 2), reject Marketing (level 3)
             if user_role and user_role.hierarchy_level == 2:
+                # Additional validation for Sales Managers: can only assign to their own team
+                current_role = db.query(Role).filter(Role.id == current_user.role_id).first()
+                if current_role and current_role.role_name == "Sales Manager":
+                    if assigned_user.manager_id != current_user.id:
+                        raise HTTPException(
+                            status_code=status.HTTP_403_FORBIDDEN,
+                            detail="You can only assign leads to your own Sales Executives"
+                        )
+                
                 assigned_to_id = assigned_user.id
                 assigned_name = assigned_user.name
             else:
@@ -287,6 +341,15 @@ def convert_submission(
             from models.role import Role
             user_role = db.query(Role).filter(Role.id == assigned_user.role_id).first()
             if user_role and user_role.hierarchy_level == 2:
+                # Additional validation for Sales Managers: can only assign to their own team
+                current_role = db.query(Role).filter(Role.id == current_user.role_id).first()
+                if current_role and current_role.role_name == "Sales Manager":
+                    if assigned_user.manager_id != current_user.id:
+                        raise HTTPException(
+                            status_code=status.HTTP_403_FORBIDDEN,
+                            detail="You can only assign leads to your own Sales Executives"
+                        )
+                
                 assigned_to_id = assigned_user.id
                 assigned_name = assigned_user.name
     

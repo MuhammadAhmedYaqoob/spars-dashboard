@@ -39,8 +39,8 @@ export default function Sidebar() {
   const navItems = [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, permission: null },
     { href: '/submissions', label: 'Form Submissions', icon: FileText, permission: 'submissions' },
-    // Hide "Leads" for Sales Executives since they have "My Assigned Leads"
-    ...(isSalesExecutive ? [] : [{ href: '/leads', label: 'Leads', icon: Users, permission: 'leads' }]),
+    // Show "Leads" for all users including Sales Executives (for manually created leads)
+    { href: '/leads', label: 'Leads', icon: Users, permission: 'leads' },
     ...(hasAssignedLeads ? [{ href: '/assigned-leads', label: 'My Assigned Leads', icon: UserCheck, permission: null }] : []),
     { href: '/calendar', label: 'Calendar', icon: Calendar, permission: null }, // Accessible to all users
     { href: '/activities', label: 'Activities', icon: Activity, permission: null },

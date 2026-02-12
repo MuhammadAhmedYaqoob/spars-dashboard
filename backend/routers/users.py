@@ -119,7 +119,15 @@ def list_assignable_users(
     if not role_ids:
         return []
     
-    users = db.query(User).filter(User.role_id.in_(role_ids)).all()
+    # Check if current user is a Sales Manager - if so, filter by manager_id
+    current_role = db.query(Role).filter(Role.id == current_user.role_id).first()
+    users_query = db.query(User).filter(User.role_id.in_(role_ids))
+    
+    # For Sales Managers: only show their own team members
+    if current_role and current_role.role_name == "Sales Manager":
+        users_query = users_query.filter(User.manager_id == current_user.id)
+    
+    users = users_query.all()
     
     # Add manager_name and role_name to each user, and double-check to exclude Marketing
     result = []

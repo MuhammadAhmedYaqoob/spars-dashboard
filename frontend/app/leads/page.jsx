@@ -17,6 +17,11 @@ export default function LeadsPage(){
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [leadToDelete, setLeadToDelete] = useState(null);
   const [assignableUsers, setAssignableUsers] = useState([]);
+  
+  // Check if user is a sales executive
+  const userRole = user?.role_name || '';
+  const isSalesExecutive = userRole === 'Sales Executive';
+  
   const [newLead, setNewLead] = useState({
     name: '',
     email: '',
@@ -26,7 +31,7 @@ export default function LeadsPage(){
     source: '',
     designation: '',
     status: 'New',
-    assigned_to_id: ''
+    assigned_to_id: isSalesExecutive ? (user?.id || '') : ''
   });
 
   useEffect(() => {
@@ -37,8 +42,15 @@ export default function LeadsPage(){
           apiGet('/leads').catch(() => []),
           apiGet('/users/assignable').catch(() => [])
         ]);
-        // Backend now filters leads by assigned user for Sales Executives
-        setLeads(leadsData);
+        
+        // For Sales Executives: filter to show only manually created leads (created_by === user.id)
+        // This distinguishes manually created leads from form submissions converted to leads
+        let filteredLeadsData = leadsData;
+        if (isSalesExecutive && user?.id) {
+          filteredLeadsData = leadsData.filter(lead => lead.created_by === user.id);
+        }
+        
+        setLeads(filteredLeadsData);
         setAssignableUsers(usersData);
       } catch (error) {
         toast.error('Failed to fetch leads');
@@ -48,7 +60,7 @@ export default function LeadsPage(){
         setLoading(false);
       }
     })();
-  }, []);
+  }, [isSalesExecutive, user?.id]);
 
   async function createLead() {
     if (!newLead.name.trim() || !newLead.email.trim() || !newLead.company.trim() || !newLead.source_type.trim()) {
@@ -64,6 +76,11 @@ export default function LeadsPage(){
     }
 
     try {
+      // For Sales Executives: always assign to themselves
+      const assignedToId = isSalesExecutive && user?.id 
+        ? Number(user.id) 
+        : (newLead.assigned_to_id ? Number(newLead.assigned_to_id) : null);
+
       const leadData = {
         name: newLead.name.trim(),
         email: newLead.email.trim(),
@@ -73,7 +90,7 @@ export default function LeadsPage(){
         status: newLead.status,
         phone: newLead.phone.trim() || null,
         designation: newLead.designation.trim() || null,
-        assigned_to_id: newLead.assigned_to_id ? Number(newLead.assigned_to_id) : null
+        assigned_to_id: assignedToId
       };
 
       await apiPost('/leads', leadData);
@@ -88,12 +105,17 @@ export default function LeadsPage(){
         source: '',
         designation: '',
         status: 'New',
-        assigned_to_id: ''
+        assigned_to_id: isSalesExecutive ? (user?.id || '') : ''
       });
       
       // Refresh leads list
       const data = await apiGet('/leads');
-      setLeads(data);
+      // Apply filtering again for Sales Executives
+      let filteredData = data;
+      if (isSalesExecutive && user?.id) {
+        filteredData = data.filter(lead => lead.created_by === user.id);
+      }
+      setLeads(filteredData);
     } catch (error) {
       toast.error('Failed to create lead');
       console.error(error);
@@ -120,7 +142,12 @@ export default function LeadsPage(){
       
       // Refresh leads list
       const data = await apiGet('/leads');
-      setLeads(data);
+      // Apply filtering again for Sales Executives
+      let filteredData = data;
+      if (isSalesExecutive && user?.id) {
+        filteredData = data.filter(lead => lead.created_by === user.id);
+      }
+      setLeads(filteredData);
     } catch (error) {
       toast.error('Failed to delete lead');
       console.error(error);
@@ -207,7 +234,16 @@ export default function LeadsPage(){
         </div>
         <button 
           className="btn primary" 
-          onClick={() => setShowAddModal(true)}
+          onClick={() => {
+            // Set assigned_to_id for sales executives when opening modal
+            if (isSalesExecutive && user?.id) {
+              setNewLead(prev => ({
+                ...prev,
+                assigned_to_id: user.id
+              }));
+            }
+            setShowAddModal(true);
+          }}
           style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
         >
           <Plus size={18} />
@@ -871,39 +907,61 @@ export default function LeadsPage(){
                 }}>
                   Assign To
                 </label>
-                <select 
-                  value={newLead.assigned_to_id || ''} 
-                  onChange={e=>setNewLead({...newLead, assigned_to_id: e.target.value ? Number(e.target.value) : ''})}
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    fontSize: '14px',
-                    border: '1px solid var(--gray-200)',
-                    borderRadius: '8px',
-                    background: '#fff',
-                    transition: 'all 0.2s ease',
-                    boxSizing: 'border-box',
-                    cursor: 'pointer',
-                    appearance: 'none',
-                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
-                    backgroundRepeat: 'no-repeat',
-                    backgroundPosition: 'right 16px center',
-                    paddingRight: '40px'
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = '#1E73FF';
-                    e.target.style.boxShadow = '0 0 0 3px rgba(30, 115, 255, 0.1)';
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = 'var(--gray-200)';
-                    e.target.style.boxShadow = 'none';
-                  }}
-                >
-                  <option value="">Unassigned</option>
-                  {assignableUsers.map(user => (
-                    <option key={user.id} value={user.id}>{user.name} ({user.email})</option>
-                  ))}
-                </select>
+                {isSalesExecutive ? (
+                  // Read-only field for Sales Executives
+                  <input
+                    type="text"
+                    value={user?.name || ''}
+                    disabled
+                    readOnly
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      fontSize: '14px',
+                      border: '1px solid var(--gray-200)',
+                      borderRadius: '8px',
+                      background: '#f5f5f5',
+                      color: '#666',
+                      cursor: 'not-allowed',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                ) : (
+                  // Dropdown for Admin/Sales Manager
+                  <select 
+                    value={newLead.assigned_to_id || ''} 
+                    onChange={e=>setNewLead({...newLead, assigned_to_id: e.target.value ? Number(e.target.value) : ''})}
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      fontSize: '14px',
+                      border: '1px solid var(--gray-200)',
+                      borderRadius: '8px',
+                      background: '#fff',
+                      transition: 'all 0.2s ease',
+                      boxSizing: 'border-box',
+                      cursor: 'pointer',
+                      appearance: 'none',
+                      backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
+                      backgroundRepeat: 'no-repeat',
+                      backgroundPosition: 'right 16px center',
+                      paddingRight: '40px'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#1E73FF';
+                      e.target.style.boxShadow = '0 0 0 3px rgba(30, 115, 255, 0.1)';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = 'var(--gray-200)';
+                      e.target.style.boxShadow = 'none';
+                    }}
+                  >
+                    <option value="">Unassigned</option>
+                    {assignableUsers.map(user => (
+                      <option key={user.id} value={user.id}>{user.name} ({user.email})</option>
+                    ))}
+                  </select>
+                )}
               </div>
             </div>
 
@@ -927,7 +985,7 @@ export default function LeadsPage(){
                     source: '',
                     designation: '',
                     status: 'New',
-                    assigned_to_id: ''
+                    assigned_to_id: isSalesExecutive ? (user?.id || '') : ''
                   });
                 }}
                 style={{ padding: '10px 20px' }}
