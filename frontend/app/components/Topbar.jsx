@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from './AuthProvider';
-import { Search, User, Bell, LogOut, Settings, ChevronDown, X } from 'lucide-react';
+import { Search, User, Bell, LogOut, Settings, ChevronDown, X, HelpCircle } from 'lucide-react';
 import { apiGet } from '@/utils/api';
 import toast from 'react-hot-toast';
 
@@ -246,6 +246,34 @@ export default function Topbar() {
 
       {/* Right Side Actions */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        {/* Help Icon */}
+        <button
+          onClick={() => router.push('/help')}
+          title="Help & Documentation"
+          style={{
+            position: 'relative',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '8px',
+            borderRadius: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            color: '#666',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'var(--gray-100)';
+            e.currentTarget.style.color = '#1E73FF';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'none';
+            e.currentTarget.style.color = '#666';
+          }}
+        >
+          <HelpCircle size={20} />
+        </button>
+
         {/* Notifications */}
         <div style={{ position: 'relative' }}>
           <button
