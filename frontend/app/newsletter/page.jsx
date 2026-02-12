@@ -78,7 +78,13 @@ export default function Newsletter(){
 
   async function addTagToSubscriber(subscriberId, tagId) {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API || 'http://127.0.0.1:8002'}/tags/entity/newsletter/${subscriberId}?tag_id=${tagId}`, {
+      // Ensure API URL has protocol
+      const apiUrl = process.env.NEXT_PUBLIC_API || 'http://localhost:8002';
+      const normalizedApiUrl = apiUrl.startsWith('http://') || apiUrl.startsWith('https://') 
+        ? apiUrl 
+        : `http://${apiUrl}`;
+      
+      const response = await fetch(`${normalizedApiUrl}/tags/entity/newsletter/${subscriberId}?tag_id=${tagId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

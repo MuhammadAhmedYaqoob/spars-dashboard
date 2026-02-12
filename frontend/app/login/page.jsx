@@ -34,7 +34,13 @@ export default function LoginPage() {
       formData.append('username', email); // OAuth2 uses 'username' field
       formData.append('password', password);
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API || 'http://127.0.0.1:8002'}/auth/login`, {
+      // Ensure API URL has protocol
+      const apiUrl = process.env.NEXT_PUBLIC_API || 'http://localhost:8002';
+      const normalizedApiUrl = apiUrl.startsWith('http://') || apiUrl.startsWith('https://') 
+        ? apiUrl 
+        : `http://${apiUrl}`;
+      
+      const response = await fetch(`${normalizedApiUrl}/auth/login`, {
         method: 'POST',
         body: formData,
       });

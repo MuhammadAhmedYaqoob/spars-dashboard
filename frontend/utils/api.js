@@ -1,6 +1,16 @@
 import { getToken } from './auth';
 
-export const API = process.env.NEXT_PUBLIC_API || 'http://127.0.0.1:8002';
+// Helper function to ensure API URL has protocol
+function normalizeApiUrl(url) {
+  if (!url) return 'http://localhost:8002';
+  // If URL doesn't start with http:// or https://, add http://
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    return `http://${url}`;
+  }
+  return url;
+}
+
+export const API = normalizeApiUrl(process.env.NEXT_PUBLIC_API || 'http://localhost:8002');
 
 function getHeaders() {
   const headers = { 'Content-Type': 'application/json' };

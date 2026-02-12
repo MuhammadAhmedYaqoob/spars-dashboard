@@ -19,7 +19,7 @@ else:
 
 SECRET_KEY = os.getenv('SECRET_KEY', 'supersecret')
 ALGORITHM = os.getenv('ALGORITHM', 'HS256')
-ALLOW_ORIGINS = [o.strip() for o in os.getenv('ALLOW_ORIGINS', 'http://localhost:3002,http://192.168.100.77:3002').split(',') if o.strip()]
+ALLOW_ORIGINS = [o.strip() for o in os.getenv('ALLOW_ORIGINS', 'http://localhost:3002,http://192.168.100.77:3002,https://spars-dashboard-7yxc.vercel.app').split(',') if o.strip()]
 
 # Forms Database Configuration
 # If USE_FORMS_DB=true, connect to spars_forms.db for form data
