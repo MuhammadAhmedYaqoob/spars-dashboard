@@ -48,12 +48,15 @@ export function hasPermission(user, permission) {
 export function canAccess(user, resource) {
   if (!user || !user.permissions) return false;
   if (user.permissions.all === true) return true;
+  // Check if resource permission is explicitly false - deny access even if view is true
+  if (user.permissions[resource] === false) return false;
   // Check specific resource permission
   if (user.permissions[resource] === true) return true;
   // For view-only users, check if they have view permission
   // View permission allows viewing leads, submissions, reports
   if (user.permissions.view === true) {
     // View-only users can see leads, submissions, reports for viewing
+    // BUT only if the resource permission is not explicitly false
     if (['leads', 'submissions', 'reports'].includes(resource)) {
       return true;
     }

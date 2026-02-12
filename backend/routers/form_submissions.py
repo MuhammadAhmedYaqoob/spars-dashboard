@@ -55,16 +55,22 @@ def _get_submissions_from_crm_db(form_type: Optional[str], db: Session) -> List[
     """Get submissions from CRM database (Submission table)"""
     query = db.query(Submission)
     if form_type:
-        # Handle form type aliases
+        # Handle form type aliases (bidirectional mapping)
         if form_type == 'product-profile':
+            query = query.filter(Submission.form_type.in_(['product-profile', 'product_profile']))
+        elif form_type == 'product_profile':
+            # Reverse mapping: product_profile should also return product-profile entries
             query = query.filter(Submission.form_type.in_(['product-profile', 'product_profile']))
         elif form_type == 'talk':
             query = query.filter(Submission.form_type.in_(['talk', 'talk_to_sales']))
         elif form_type == 'talk_to_sales':
             query = query.filter(Submission.form_type.in_(['talk', 'talk_to_sales']))
         elif form_type == 'general':
-            # 'general' is an alias for 'contact' (General Inquiry)
-            query = query.filter(Submission.form_type == 'general')
+            # 'general' should return both 'general' and 'contact' entries
+            query = query.filter(Submission.form_type.in_(['general', 'contact']))
+        elif form_type == 'contact':
+            # Reverse mapping: 'contact' should also return 'general' entries
+            query = query.filter(Submission.form_type.in_(['general', 'contact']))
         else:
             query = query.filter(Submission.form_type == form_type)
     submissions = query.order_by(Submission.submitted.desc()).all()
